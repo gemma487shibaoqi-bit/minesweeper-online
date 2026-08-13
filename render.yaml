@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: minesweeper-online
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+
