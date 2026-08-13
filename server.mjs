@@ -1,5 +1,135 @@
-import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import crypto from 'node:crypto'; import {fileURLToPath} from 'node:url';
-const root=path.dirname(fileURLToPath(import.meta.url)),rooms=new Map(),clients=new Map(),PORT=Number(process.env.PORT||3000);const json=(r,c,d)=>{r.writeHead(c,{'content-type':'application/json; charset=utf-8'});r.end(JSON.stringify(d))};const body=q=>new Promise((ok,no)=>{let s='';q.on('data',c=>s+=c);q.on('end',()=>{try{ok(JSON.parse(s||'{}'))}catch(e){no(e)}})});const code=()=>crypto.randomBytes(3).toString('hex').toUpperCase();const pub=r=>({...r,mines:r.status==='playing'?undefined:r.mines});const cast=id=>{const d=`data: ${JSON.stringify(pub(rooms.get(id)))}\n\n`;for(const r of clients.get(id)||[])r.write(d)};
-function mines(seed){let a=[],n=0;while(a.length<40){for(const b of crypto.createHash('sha256').update(seed+':'+n++).digest()){let k=b%256;if(!a.includes(k))a.push(k);if(a.length===40)break}}return a}function reveal(o,start){if(o.mines.includes(start)){o.opened.push(start);o.status='lost';o.endedAt=Date.now();return}let todo=[start],seen=new Set(o.opened);while(todo.length){let k=todo.pop();if(seen.has(k)||o.flags.includes(k))continue;seen.add(k);let r=Math.floor(k/16),c=k%16,n=0;for(let y=-1;y<=1;y++)for(let x=-1;x<=1;x++){let nr=r+y,nc=c+x;if(nr>=0&&nr<16&&nc>=0&&nc<16&&o.mines.includes(nr*16+nc))n++}if(!n)for(let y=-1;y<=1;y++)for(let x=-1;x<=1;x++){let nr=r+y,nc=c+x;if(nr>=0&&nr<16&&nc>=0&&nc<16)todo.push(nr*16+nc)}}o.opened=[...seen];if(o.opened.length===216){o.status='won';o.endedAt=Date.now()}}
-http.createServer(async(q,r)=>{let u=new URL(q.url,'http://x');if(q.method==='POST'&&u.pathname==='/api/rooms'){let b=await body(q),id=code();while(rooms.has(id))id=code();let p={id:crypto.randomUUID(),name:(b.name||'鐜╁ 1').slice(0,16),color:'#6ee7b7'},now=Date.now();rooms.set(id,{id,players:[p],mines:mines(id),opened:[],flags:[],status:'waiting',createdAt:now,startedAt:null,endedAt:null,lastAction:'鎴块棿宸插垱寤?});return json(r,200,{room:pub(rooms.get(id)),playerId:p.id})}let m=u.pathname.match(/^\/api\/rooms\/([A-F0-9]{6})(?:\/(join|action|events))?$/);if(m){let o=rooms.get(m[1]);if(!o)return json(r,404,{error:'鎴块棿涓嶅瓨鍦?});if(q.method==='GET'&&m[2]==='events'){r.writeHead(200,{'content-type':'text/event-stream','cache-control':'no-cache'});r.write(`data: ${JSON.stringify(pub(o))}\n\n`);if(!clients.has(o.id))clients.set(o.id,new Set());clients.get(o.id).add(r);q.on('close',()=>clients.get(o.id)?.delete(r));return}if(q.method==='GET'&&!m[2])return json(r,200,pub(o));if(q.method==='POST'&&m[2]==='join'){let b=await body(q);if(o.players.length>=4)return json(r,409,{error:'鎴块棿宸叉弧'});let p={id:crypto.randomUUID(),name:(b.name||`鐜╁ ${o.players.length+1}`).slice(0,16),color:['#60a5fa','#fbbf24','#f472b6'][o.players.length-1]};o.players.push(p);o.lastAction=`${p.name} 鍔犲叆浜嗘埧闂碻;cast(o.id);return json(r,200,{room:pub(o),playerId:p.id})}if(q.method==='POST'&&m[2]==='action'){let b=await body(q),p=o.players.find(x=>x.id===b.playerId);if(!p)return json(r,403,{error:'韬唤鏃犳晥'});if(b.type==='start'&&o.status==='waiting'){o.status='playing';o.startedAt=Date.now();o.lastAction=`${p.name} 寮€濮嬩簡娓告垙`}else if(o.status==='playing'&&Number.isInteger(b.cell)&&b.cell>=0&&b.cell<256){if(b.type==='flag'&&!o.opened.includes(b.cell)){o.flags=o.flags.includes(b.cell)?o.flags.filter(x=>x!==b.cell):o.flags.length<40?[...o.flags,b.cell]:o.flags;o.lastAction=`${p.name} 鏇存柊浜嗘爣璁癭}if(b.type==='open'&&!o.flags.includes(b.cell)&&!o.opened.includes(b.cell)){reveal(o,b.cell);o.lastAction=`${p.name} 鎵撳紑浜嗕竴鏍糮}}cast(o.id);return json(r,200,pub(o))}}let f=u.pathname==='/'?'index.html':u.pathname.slice(1),t=path.join(root,'public',f);if(!t.startsWith(path.join(root,'public'))||!fs.existsSync(t)){r.writeHead(404);return r.end('Not found')}let e=path.extname(t);r.writeHead(200,{'content-type':e==='.css'?'text/css':e==='.js'?'text/javascript':'text/html; charset=utf-8'});fs.createReadStream(t).pipe(r)}).listen(PORT,()=>console.log(`鑱旀満鎵浄宸插惎鍔細http://localhost:${PORT}`));
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
+const root = path.dirname(fileURLToPath(import.meta.url));
+const rooms = new Map();
+const clients = new Map();
+const PORT = Number(process.env.PORT || 3000);
+
+function sendJson(res, status, data) {
+  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify(data));
+}
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let value = '';
+    req.on('data', chunk => value += chunk);
+    req.on('end', () => { try { resolve(JSON.parse(value || '{}')); } catch (error) { reject(error); } });
+  });
+}
+function roomCode() { return crypto.randomBytes(3).toString('hex').toUpperCase(); }
+function publicRoom(room) { return { ...room, mines: room.status === 'playing' ? undefined : room.mines }; }
+function broadcast(id) {
+  const payload = `data: ${JSON.stringify(publicRoom(rooms.get(id)))}\n\n`;
+  for (const response of clients.get(id) || []) response.write(payload);
+}
+function makeMines(seed) {
+  const result = [];
+  let round = 0;
+  while (result.length < 40) {
+    const bytes = crypto.createHash('sha256').update(seed + ':' + round++).digest();
+    for (const byte of bytes) {
+      const cell = byte % 256;
+      if (!result.includes(cell)) result.push(cell);
+      if (result.length === 40) break;
+    }
+  }
+  return result;
+}
+function reveal(room, start) {
+  if (room.mines.includes(start)) {
+    room.opened.push(start);
+    room.status = 'lost';
+    room.endedAt = Date.now();
+    return;
+  }
+  const pending = [start];
+  const seen = new Set(room.opened);
+  while (pending.length) {
+    const cell = pending.pop();
+    if (seen.has(cell) || room.flags.includes(cell)) continue;
+    seen.add(cell);
+    const row = Math.floor(cell / 16);
+    const col = cell % 16;
+    let count = 0;
+    for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) {
+      const r = row + y, c = col + x;
+      if (r >= 0 && r < 16 && c >= 0 && c < 16 && room.mines.includes(r * 16 + c)) count++;
+    }
+    if (!count) for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) {
+      const r = row + y, c = col + x;
+      if (r >= 0 && r < 16 && c >= 0 && c < 16) pending.push(r * 16 + c);
+    }
+  }
+  room.opened = [...seen];
+  if (room.opened.length === 216) {
+    room.status = 'won';
+    room.endedAt = Date.now();
+  }
+}
+
+http.createServer(async (req, res) => {
+  const url = new URL(req.url, 'http://localhost');
+  if (req.method === 'POST' && url.pathname === '/api/rooms') {
+    const input = await readBody(req);
+    let id = roomCode();
+    while (rooms.has(id)) id = roomCode();
+    const player = { id: crypto.randomUUID(), name: (input.name || 'Player 1').slice(0, 16), color: '#6ee7b7' };
+    rooms.set(id, { id, players: [player], mines: makeMines(id), opened: [], flags: [], status: 'waiting', createdAt: Date.now(), startedAt: null, endedAt: null, lastAction: 'Room created' });
+    return sendJson(res, 200, { room: publicRoom(rooms.get(id)), playerId: player.id });
+  }
+
+  const match = url.pathname.match(/^\/api\/rooms\/([A-F0-9]{6})(?:\/(join|action|events))?$/);
+  if (match) {
+    const room = rooms.get(match[1]);
+    if (!room) return sendJson(res, 404, { error: 'Room not found' });
+    if (req.method === 'GET' && match[2] === 'events') {
+      res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
+      res.write(`data: ${JSON.stringify(publicRoom(room))}\n\n`);
+      if (!clients.has(room.id)) clients.set(room.id, new Set());
+      clients.get(room.id).add(res);
+      req.on('close', () => clients.get(room.id)?.delete(res));
+      return;
+    }
+    if (req.method === 'GET' && !match[2]) return sendJson(res, 200, publicRoom(room));
+    if (req.method === 'POST' && match[2] === 'join') {
+      const input = await readBody(req);
+      if (room.players.length >= 4) return sendJson(res, 409, { error: 'Room is full' });
+      const player = { id: crypto.randomUUID(), name: (input.name || `Player ${room.players.length + 1}`).slice(0, 16), color: ['#60a5fa', '#fbbf24', '#f472b6'][room.players.length - 1] };
+      room.players.push(player);
+      room.lastAction = `${player.name} joined`;
+      broadcast(room.id);
+      return sendJson(res, 200, { room: publicRoom(room), playerId: player.id });
+    }
+    if (req.method === 'POST' && match[2] === 'action') {
+      const input = await readBody(req);
+      const player = room.players.find(item => item.id === input.playerId);
+      if (!player) return sendJson(res, 403, { error: 'Invalid player' });
+      if (input.type === 'start' && room.status === 'waiting') {
+        room.status = 'playing'; room.startedAt = Date.now(); room.lastAction = `${player.name} started the game`;
+      } else if (room.status === 'playing' && Number.isInteger(input.cell) && input.cell >= 0 && input.cell < 256) {
+        if (input.type === 'flag' && !room.opened.includes(input.cell)) {
+          room.flags = room.flags.includes(input.cell) ? room.flags.filter(cell => cell !== input.cell) : room.flags.length < 40 ? [...room.flags, input.cell] : room.flags;
+          room.lastAction = `${player.name} updated a flag`;
+        }
+        if (input.type === 'open' && !room.flags.includes(input.cell) && !room.opened.includes(input.cell)) {
+          reveal(room, input.cell); room.lastAction = `${player.name} opened a cell`;
+        }
+      }
+      broadcast(room.id);
+      return sendJson(res, 200, publicRoom(room));
+    }
+  }
+
+  const file = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
+  const target = path.join(root, 'public', file);
+  if (!target.startsWith(path.join(root, 'public')) || !fs.existsSync(target)) {
+    res.writeHead(404); return res.end('Not found');
+  }
+  const ext = path.extname(target);
+  res.writeHead(200, { 'content-type': ext === '.css' ? 'text/css' : ext === '.js' ? 'text/javascript' : 'text/html; charset=utf-8' });
+  fs.createReadStream(target).pipe(res);
+}).listen(PORT, '0.0.0.0', () => console.log(`Minesweeper server listening on port ${PORT}`));
