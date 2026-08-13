@@ -1,2 +1,46 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>骞惰偐鎺掗浄 路 鍦ㄧ嚎鎵浄</title><link rel="stylesheet" href="/style.css"></head><body><main><header><div class="brand"><span class="logo">鉁?/span><div><b>骞惰偐鎺掗浄</b><small>CO-OP MINESWEEPER</small></div></div><span class="online">鈼?瀹炴椂鑱旀満</span></header><section id="lobby" class="lobby"><div><p class="eyebrow">涓€璧锋竻绌洪浄鍖?/p><h1>鎷嗗脊涓嶅鍗曪紝<br><em>榛樺鎵嶆槸澶栨寕銆?/em></h1><p class="intro">鍒涘缓鎴块棿锛屾妸閾炬帴鍙戠粰鏈嬪弸銆備綘浠湅鍒板悓涓€鍧楁鐩橈紝姣忎竴姝ラ兘浼氬疄鏃跺悓姝ャ€?/p><label>浣犵殑鏄电О<input id="name" maxlength="16" placeholder="姣斿锛氭壂闆烽槦闀?></label><div class="actions"><button id="create">鍒涘缓鏂版埧闂?/button><div class="join"><input id="roomCode" maxlength="6" placeholder="杈撳叆鎴块棿鍙?><button id="join">鍔犲叆</button></div></div></div><aside><div class="mini">馃毄 <b>鍗忎綔妯″紡</b><span>鍏卞悓寮€鏍间笌鎻掓棗</span></div><div class="mini">鈿?<b>鍗虫椂鍚屾</b><span>鏃犻渶鍒锋柊椤甸潰</span></div><div class="mini">馃敆 <b>涓€閿個璇?/b><span>鍒嗕韩閾炬帴鍗冲彲鍔犲叆</span></div></aside></section><section id="game" hidden><div class="gamebar"><div><p class="eyebrow">鎴块棿 <span id="code"></span></p><h2 id="status">绛夊緟闃熷弸</h2></div><div class="stats"><span>馃挘 <b id="left">40</b></span><span>鈴?<b id="timer">00:00</b></span><button id="copy">澶嶅埗閭€璇烽摼鎺?/button></div></div><div class="layout"><div><div id="board" class="board"></div><p class="tip">宸﹂敭寮€鏍?路 鍙抽敭鎻掓棗</p></div><aside class="panel"><h3>鎺掗浄灏忛槦</h3><div id="players"></div><hr><p class="muted">鏈€杩戝姩鎬?/p><p id="activity">鎴块棿宸插垱寤?/p><button id="start">寮€濮嬫父鎴?/button></aside></div></section></main><div id="toast"></div><script src="/app.js"></script></body></html>
-
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>并肩排雷 · 在线扫雷</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+  <header>
+    <div class="brand"><span class="logo">✦</span><div><b>并肩排雷</b><small>CO-OP MINESWEEPER</small></div></div>
+    <span class="online">● 实时联机</span>
+  </header>
+  <section id="lobby" class="lobby">
+    <div>
+      <p class="eyebrow">一起清空雷区</p>
+      <h1>拆弹不孤单，<br><em>默契才是外挂。</em></h1>
+      <p class="intro">创建房间，把链接发给朋友。你们看到同一块棋盘，每一步都会实时同步。</p>
+      <label>你的昵称<input id="name" maxlength="16" placeholder="比如：扫雷队长"></label>
+      <div class="actions">
+        <button id="create">创建新房间</button>
+        <div class="join"><input id="roomCode" maxlength="6" placeholder="输入房间号"><button id="join">加入</button></div>
+      </div>
+    </div>
+    <aside>
+      <div class="mini">🚩 <b>协作模式</b><span>共同开格与插旗</span></div>
+      <div class="mini">⚡ <b>即时同步</b><span>无需刷新页面</span></div>
+      <div class="mini">🔗 <b>一键邀请</b><span>分享链接即可加入</span></div>
+    </aside>
+  </section>
+  <section id="game" hidden>
+    <div class="gamebar">
+      <div><p class="eyebrow">房间 <span id="code"></span></p><h2 id="status">等待队友</h2></div>
+      <div class="stats"><span>💣 <b id="left">40</b></span><span>⏱ <b id="timer">00:00</b></span><button id="copy">复制邀请链接</button></div>
+    </div>
+    <div class="layout">
+      <div><div id="board" class="board"></div><p class="tip">左键开格 · 右键插旗</p></div>
+      <aside class="panel"><h3>排雷小队</h3><div id="players"></div><hr><p class="muted">最近动态</p><p id="activity">房间已创建</p><button id="start">开始游戏</button></aside>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+<script src="/app.js"></script>
+</body>
+</html>
