@@ -10,3 +10,22 @@
 .board-wrap .tip{position:static!important}
 .layout{grid-template-columns:minmax(0,1fr) 240px!important}
 @media(max-width:1100px){main{padding:18px}.layout{grid-template-columns:minmax(0,1fr) 210px!important;gap:14px}.panel{padding:14px}.gamebar{margin-bottom:12px}}
+
+/* Maximize the active game on desktop while keeping the lobby centered. */
+main:has(#game:not([hidden])){max-width:none;width:100%;padding:18px 28px 10px}
+main:has(#game:not([hidden])) header{margin:0 auto 10px;max-width:none}
+main:has(#game:not([hidden])) .brand small{font-size:9px}
+main:has(#game:not([hidden])) .logo{width:34px;height:34px;border-radius:9px}
+#game .gamebar{margin-bottom:10px;align-items:center}
+#game .gamebar h2{font-size:26px;margin:2px 0}
+#game .eyebrow{margin:0}
+#game .layout{grid-template-columns:minmax(0,1fr) 220px!important;gap:14px;align-items:start}
+#game .board{height:min(calc(100vh - 170px),calc((100vw - 290px)/2));width:auto!important;max-width:100%;margin:0 auto;aspect-ratio:2/1}
+#game .tip{margin:6px 0 0;font-size:11px}
+#game .panel{padding:15px;border-radius:12px}
+#game .panel h3{margin:0 0 10px}
+#game .player{margin:10px 0}
+#game .panel hr{margin:13px 0}
+#game .panel>button{margin-top:10px;padding:11px}
+#game .stats span,#game .stats button{padding:9px 12px}
+@media(min-width:1500px){main:has(#game:not([hidden])){padding-left:42px;padding-right:42px}#game .layout{grid-template-columns:minmax(0,1fr) 240px!important;gap:18px}}
