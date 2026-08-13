@@ -11,6 +11,7 @@ const PORT = Number(process.env.PORT || 3000);
 const send = (res, status, data) => { res.writeHead(status, {'content-type':'application/json; charset=utf-8'}); res.end(JSON.stringify(data)); };
 const read = req => new Promise((resolve, reject) => { let value=''; req.on('data', c => value += c); req.on('end', () => { try { resolve(JSON.parse(value || '{}')); } catch (e) { reject(e); } }); });
 const roomCode = () => crypto.randomBytes(3).toString('hex').toUpperCase();
+const clientIp = req => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
 
 function makeMines(seed) {
   const result = new Set(); let round = 0;
@@ -38,7 +39,8 @@ function reset(room) {
   room.opened=[]; room.flags=[]; room.status='waiting'; room.startedAt=null; room.endedAt=null; room.lastAction='New round ready';
 }
 function publicRoom(room) {
-  return { ...room, mines: undefined, counts: room.status === 'waiting' ? undefined : room.counts, width: WIDTH, height: HEIGHT, mineCount: MINE_COUNT };
+  const { playerIps, ...safeRoom } = room;
+  return { ...safeRoom, mines: undefined, counts: room.status === 'waiting' ? undefined : room.counts, width: WIDTH, height: HEIGHT, mineCount: MINE_COUNT };
 }
 function broadcast(id) { const data=`data: ${JSON.stringify(publicRoom(rooms.get(id)))}\n\n`; for (const res of clients.get(id)||[]) res.write(data); }
 function reveal(room, start) {
@@ -57,14 +59,14 @@ http.createServer(async(req,res)=>{
   if(req.method==='POST'&&url.pathname==='/api/rooms'){
     const input=await read(req); let id=roomCode(); while(rooms.has(id))id=roomCode();
     const player={id:crypto.randomUUID(),name:(input.name||'Player 1').slice(0,16),color:'#6ee7b7'};
-    const room={id,players:[player],round:0,createdAt:Date.now()}; reset(room); rooms.set(id,room);
+    const room={id,players:[player],playerIps:[clientIp(req)],round:0,createdAt:Date.now()}; reset(room); rooms.set(id,room);
     return send(res,200,{room:publicRoom(room),playerId:player.id});
   }
   const match=url.pathname.match(/^\/api\/rooms\/([A-F0-9]{6})(?:\/(join|action|events))?$/);
   if(match){
     const room=rooms.get(match[1]); if(!room)return send(res,404,{error:'Room not found'});
     if(req.method==='GET'&&match[2]==='events'){res.writeHead(200,{'content-type':'text/event-stream','cache-control':'no-cache',connection:'keep-alive'});res.write(`data: ${JSON.stringify(publicRoom(room))}\n\n`);if(!clients.has(room.id))clients.set(room.id,new Set());clients.get(room.id).add(res);req.on('close',()=>clients.get(room.id)?.delete(res));return;}
-    if(req.method==='POST'&&match[2]==='join'){const input=await read(req);if(room.players.length>=4)return send(res,409,{error:'Room is full'});const player={id:crypto.randomUUID(),name:(input.name||`Player ${room.players.length+1}`).slice(0,16),color:['#60a5fa','#fbbf24','#f472b6'][room.players.length-1]};room.players.push(player);room.lastAction=`${player.name} joined`;broadcast(room.id);return send(res,200,{room:publicRoom(room),playerId:player.id});}
+    if(req.method==='POST'&&match[2]==='join'){const input=await read(req);const ip=clientIp(req);if(room.playerIps.includes(ip))return send(res,409,{error:'同一网络地址在一个房间中只能加入一名玩家'});if(room.players.length>=4)return send(res,409,{error:'Room is full'});const player={id:crypto.randomUUID(),name:(input.name||`Player ${room.players.length+1}`).slice(0,16),color:['#60a5fa','#fbbf24','#f472b6'][room.players.length-1]};room.players.push(player);room.playerIps.push(ip);room.lastAction=`${player.name} joined`;broadcast(room.id);return send(res,200,{room:publicRoom(room),playerId:player.id});}
     if(req.method==='POST'&&match[2]==='action'){
       const input=await read(req),player=room.players.find(p=>p.id===input.playerId);if(!player)return send(res,403,{error:'Invalid player'});
       if(input.type==='reset'&&(room.status==='won'||room.status==='lost')){reset(room);room.lastAction=`${player.name} started a new round`;}
