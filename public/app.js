@@ -1,2 +1,80 @@
-let room,playerId,events;const $=s=>document.querySelector(s);const api=(u,o={})=>fetch(u,{headers:{'content-type':'application/json'},...o}).then(async r=>{let d=await r.json();if(!r.ok)throw Error(d.error);return d}),toast=t=>{$('#toast').textContent=t;$('#toast').className='show';setTimeout(()=>$('#toast').className='',1800)};function enter(d){room=d.room;playerId=d.playerId;history.replaceState(null,'',`?room=${room.id}`);$('#lobby').hidden=true;$('#game').hidden=false;events?.close();events=new EventSource(`/api/rooms/${room.id}/events`);events.onmessage=e=>{room=JSON.parse(e.data);render()};render()}function count(k){let n=0,r=Math.floor(k/16),c=k%16;for(let y=-1;y<=1;y++)for(let x=-1;x<=1;x++){let a=r+y,b=c+x;if(a>=0&&a<16&&b>=0&&b<16&&room.mines?.includes(a*16+b))n++}return n}function render(){$('#code').textContent=room.id;$('#left').textContent=40-room.flags.length;$('#players').innerHTML=room.players.map(p=>`<div class="player"><i style="background:${p.color}"></i><b>${p.name}</b><span>${p.id===playerId?'浣?:'鍦ㄧ嚎'}</span></div>`).join('');$('#activity').textContent=room.lastAction;$('#start').hidden=room.status!=='waiting';$('#start').disabled=room.players.length<2;$('#start').textContent=room.players.length<2?'绛夊緟闃熷弸鍔犲叆':'寮€濮嬫父鎴?;$('#status').textContent={waiting:'绛夊緟闃熷弸',playing:'闆峰尯杩涜涓?,won:'浠诲姟鎴愬姛锛?,lost:'韪╅浄浜嗭紝浠诲姟澶辫触'}[room.status];let h='';for(let k=0;k<256;k++){let open=room.opened.includes(k),mine=room.mines?.includes(k),flag=room.flags.includes(k),v=open?(mine?'鉁?:count(k)||''):flag?'鈿?:room.status!=='playing'&&room.status!=='waiting'&&mine?'鉁?:'';h+=`<button class="cell ${open?'open':''} ${mine&&open?'boom':''} n${v}" data-k="${k}">${v}</button>`}$('#board').innerHTML=h}async function act(type,cell){try{room=await api(`/api/rooms/${room.id}/action`,{method:'POST',body:JSON.stringify({playerId,type,cell})});render()}catch(e){toast(e.message)}}$('#create').onclick=async()=>{try{enter(await api('/api/rooms',{method:'POST',body:JSON.stringify({name:$('#name').value})}))}catch(e){toast(e.message)}};$('#join').onclick=async()=>{try{enter(await api(`/api/rooms/${$('#roomCode').value.trim().toUpperCase()}/join`,{method:'POST',body:JSON.stringify({name:$('#name').value})}))}catch(e){toast(e.message)}};$('#start').onclick=()=>act('start');$('#copy').onclick=()=>navigator.clipboard.writeText(location.href).then(()=>toast('閭€璇烽摼鎺ュ凡澶嶅埗'));$('#board').onclick=e=>{let c=e.target.closest('.cell');if(c)act('open',+c.dataset.k)};$('#board').oncontextmenu=e=>{e.preventDefault();let c=e.target.closest('.cell');if(c)act('flag',+c.dataset.k)};setInterval(()=>{if(!room)return;let s=room.startedAt?Math.floor(((room.endedAt||Date.now())-room.startedAt)/1000):0;$('#timer').textContent=`${String(s/60|0).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`},500);let q=new URLSearchParams(location.search).get('room')?.toUpperCase();if(q){$('#roomCode').value=q;toast('杈撳叆鏄电О鍚庡姞鍏ュソ鍙嬫埧闂?)}
-
+let room, playerId, events;
+const $ = selector => document.querySelector(selector);
+const api = (url, options = {}) => fetch(url, { headers: { 'content-type': 'application/json' }, ...options }).then(async response => {
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || '请求失败');
+  return data;
+});
+function toast(text) {
+  $('#toast').textContent = text;
+  $('#toast').className = 'show';
+  setTimeout(() => $('#toast').className = '', 1800);
+}
+function enter(data) {
+  room = data.room;
+  playerId = data.playerId;
+  history.replaceState(null, '', `?room=${room.id}`);
+  $('#lobby').hidden = true;
+  $('#game').hidden = false;
+  events?.close();
+  events = new EventSource(`/api/rooms/${room.id}/events`);
+  events.onmessage = event => { room = JSON.parse(event.data); render(); };
+  render();
+}
+function adjacentMines(cell) {
+  let total = 0;
+  const row = Math.floor(cell / 16), col = cell % 16;
+  for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) {
+    const r = row + y, c = col + x;
+    if (r >= 0 && r < 16 && c >= 0 && c < 16 && room.mines?.includes(r * 16 + c)) total++;
+  }
+  return total;
+}
+function render() {
+  $('#code').textContent = room.id;
+  $('#left').textContent = 40 - room.flags.length;
+  $('#players').innerHTML = room.players.map(player =>
+    `<div class="player"><i style="background:${player.color}"></i><b>${player.name}</b><span>${player.id === playerId ? '你' : '在线'}</span></div>`
+  ).join('');
+  $('#activity').textContent = room.lastAction;
+  $('#start').hidden = room.status !== 'waiting';
+  $('#start').disabled = room.players.length < 2;
+  $('#start').textContent = room.players.length < 2 ? '等待队友加入' : '开始游戏';
+  $('#status').textContent = { waiting: '等待队友', playing: '雷区进行中', won: '任务成功！', lost: '踩雷了，任务失败' }[room.status];
+  let cells = '';
+  for (let cell = 0; cell < 256; cell++) {
+    const open = room.opened.includes(cell), mine = room.mines?.includes(cell), flag = room.flags.includes(cell);
+    const value = open ? (mine ? '✹' : adjacentMines(cell) || '') : flag ? '⚑' : (room.status !== 'playing' && room.status !== 'waiting' && mine ? '✹' : '');
+    cells += `<button class="cell ${open ? 'open' : ''} ${mine && open ? 'boom' : ''} n${value}" data-k="${cell}" aria-label="格子 ${cell + 1}">${value}</button>`;
+  }
+  $('#board').innerHTML = cells;
+}
+async function act(type, cell) {
+  try {
+    room = await api(`/api/rooms/${room.id}/action`, { method: 'POST', body: JSON.stringify({ playerId, type, cell }) });
+    render();
+  } catch (error) { toast(error.message); }
+}
+$('#create').onclick = async () => {
+  try { enter(await api('/api/rooms', { method: 'POST', body: JSON.stringify({ name: $('#name').value }) })); }
+  catch (error) { toast(error.message); }
+};
+$('#join').onclick = async () => {
+  const id = $('#roomCode').value.trim().toUpperCase();
+  try { enter(await api(`/api/rooms/${id}/join`, { method: 'POST', body: JSON.stringify({ name: $('#name').value }) })); }
+  catch (error) { toast(error.message); }
+};
+$('#start').onclick = () => act('start');
+$('#copy').onclick = () => navigator.clipboard.writeText(location.href).then(() => toast('邀请链接已复制'));
+$('#board').onclick = event => { const cell = event.target.closest('.cell'); if (cell) act('open', Number(cell.dataset.k)); };
+$('#board').oncontextmenu = event => { event.preventDefault(); const cell = event.target.closest('.cell'); if (cell) act('flag', Number(cell.dataset.k)); };
+setInterval(() => {
+  if (!room) return;
+  const seconds = room.startedAt ? Math.floor(((room.endedAt || Date.now()) - room.startedAt) / 1000) : 0;
+  $('#timer').textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+}, 500);
+const invitedRoom = new URLSearchParams(location.search).get('room')?.toUpperCase();
+if (invitedRoom) {
+  $('#roomCode').value = invitedRoom;
+  toast('输入昵称后加入好友房间');
+}
