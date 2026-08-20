@@ -42,3 +42,9 @@ main:has(#game:not([hidden])) .logo{width:34px;height:34px;border-radius:9px}
 .msg{margin:0 0 10px}.msg>div{display:flex;gap:6px;align-items:center}.msg b{font-size:11px}.msg time{font-size:9px;color:#607082}.msg p{display:inline-block;margin:3px 0 0;background:#202c38;border-radius:3px 10px 10px 10px;padding:7px 9px;font-size:12px;line-height:1.35;max-width:100%;overflow-wrap:anywhere}.msg.mine{text-align:right}.msg.mine>div{justify-content:flex-end}.msg.mine p{background:#24463d;border-radius:10px 3px 10px 10px;text-align:left}
 #chatForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}#chatForm input{width:100%;min-width:0;padding:9px 10px;font-size:12px}#chatForm button{padding:9px 10px;border-radius:8px}
 @media(max-width:900px){.setup-row{display:block}.setup-row select,.setup-row label input{width:100%}#game .panel{max-height:none}}
+
+/* Mode-specific board sizing; overrides the legacy fixed 100-column rule. */
+#game .board[data-mode="classic"]{max-width:min(1050px,calc(100vw - 310px));}
+#game .board[data-mode="advanced"]{max-width:min(1350px,calc(100vw - 310px));}
+#game .board[data-mode="huge"]{max-width:calc(100vw - 310px);}
+#chatForm button:disabled{opacity:.55;cursor:wait}
