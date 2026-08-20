@@ -29,3 +29,16 @@ main:has(#game:not([hidden])) .logo{width:34px;height:34px;border-radius:9px}
 #game .panel>button{margin-top:10px;padding:11px}
 #game .stats span,#game .stats button{padding:9px 12px}
 @media(min-width:1500px){main:has(#game:not([hidden])){padding-left:42px;padding-right:42px}#game .layout{grid-template-columns:minmax(0,1fr) 240px!important;gap:18px}}
+
+/* Mode picker and real-time room chat */
+.setup-row{display:flex;gap:14px;align-items:end}.setup-row label{margin-top:24px}.setup-row select{display:block;margin-top:8px;width:240px;background:#151d27;border:1px solid #283544;color:#fff;border-radius:10px;padding:14px 16px;font:inherit;outline:none}
+#game .panel{display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 130px);padding:0;background:transparent;border:0}
+#game .panel>section{background:#131b24;border:1px solid #263340;border-radius:12px;padding:14px}
+#game .team button{width:100%;margin-top:10px;padding:10px}
+.chat{display:flex;flex-direction:column;min-height:230px;flex:1;overflow:hidden}
+.chat-title{display:flex;align-items:center;justify-content:space-between}.chat-title h3{margin:0}.chat-title span{font-size:10px;color:#6ee7b7}
+.messages{flex:1;min-height:120px;max-height:280px;overflow-y:auto;margin:10px -4px;padding:0 4px;scrollbar-width:thin}
+.chat-empty{color:#66788a;font-size:12px;text-align:center;padding:20px 0}
+.msg{margin:0 0 10px}.msg>div{display:flex;gap:6px;align-items:center}.msg b{font-size:11px}.msg time{font-size:9px;color:#607082}.msg p{display:inline-block;margin:3px 0 0;background:#202c38;border-radius:3px 10px 10px 10px;padding:7px 9px;font-size:12px;line-height:1.35;max-width:100%;overflow-wrap:anywhere}.msg.mine{text-align:right}.msg.mine>div{justify-content:flex-end}.msg.mine p{background:#24463d;border-radius:10px 3px 10px 10px;text-align:left}
+#chatForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}#chatForm input{width:100%;min-width:0;padding:9px 10px;font-size:12px}#chatForm button{padding:9px 10px;border-radius:8px}
+@media(max-width:900px){.setup-row{display:block}.setup-row select,.setup-row label input{width:100%}#game .panel{max-height:none}}
